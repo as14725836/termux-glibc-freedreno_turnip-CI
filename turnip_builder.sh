@@ -36,38 +36,46 @@ check_deps(){
 		fi
 
 	echo "Installing python Mako dependency (if missing) ..." $'\n'
-		pip install mako &> /dev/null
+	pip install mako &> /dev/null
 }
 
 prepare_workdir(){
 	echo "Preparing work directory ..." $'\n'
-		mkdir -p "$workdir" && cd "$_"
+	mkdir -p "$workdir" && cd "$_"
 
 	echo "Downloading mesa source ..." $'\n'
-		git clone $mesasrc --depth=1 --no-single-branch $srcfolder
-		cd $srcfolder
+	git clone $mesasrc --depth=1 --no-single-branch $srcfolder
+	cd $srcfolder
 }
 
 build_lib_for_linux(){
 	echo "==== Building Mesa on $1 branch ===="
+	
+	# 切换分支逻辑（从原脚本搬过来）
+	echo "Switching to branch: origin/$1"
 	git checkout --force origin/$1
+	
+	# 获取当前 commit hash 用于版本信息
+	GITHASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+	echo "Current commit: $GITHASH"
+	
 	echo "Pushing TU_VERSION..."
 	echo "#define TUGEN8_DRV_VERSION \"v$BUILD_VERSION\"" > ./src/freedreno/vulkan/tu_version.h
 
 	echo "Generating build files for Linux ..." $'\n'
-		meson setup build-linux \
-			--prefix=/tmp/turnip-$2 \
-			-Dbuildtype=release \
-			-Dstrip=true \
-			-Dgallium-drivers= \
-			-Dvulkan-drivers=freedreno \
-			-Dvulkan-beta=true \
-			-Dfreedreno-kmds=kgsl \
-			-Degl=disabled \
-			--reconfigure
+	meson setup build-linux \
+		--prefix=/tmp/turnip-$2 \
+		-Dbuildtype=release \
+		-Dstrip=true \
+		-Dgallium-drivers= \
+		-Dvulkan-drivers=freedreno \
+		-Dvulkan-beta=true \
+		-Dfreedreno-kmds=kgsl \
+		-Degl=disabled \
+		--reconfigure
 
 	echo "Compiling build files ..." $'\n'
-		ninja -C build-linux install
+	ninja -C build-linux install
 
 	if ! [ -a /tmp/turnip-$2/lib/libvulkan_freedreno.so ]; then
 		echo -e "$red Build failed! $nocolor" && exit 1
@@ -80,6 +88,8 @@ build_lib_for_linux(){
 	
 	if ! [ -a /tmp/a8xx-$2-V$BUILD_VERSION.zip ]; then
 		echo -e "$red Failed to pack the archive! $nocolor"
+	else
+		echo -e "$green Archive created: /tmp/a8xx-$2-V$BUILD_VERSION.zip $nocolor"
 	fi
 }
 
