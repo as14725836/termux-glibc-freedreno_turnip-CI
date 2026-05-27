@@ -53,8 +53,8 @@ build_lib_for_linux(){
 	echo "==== Building Mesa on $1 branch ===="
 	
 	# 切换到指定分支
-	echo "Switching to branch: origin/$1"
-	git checkout --force origin/$1 || {
+	echo "Switching to branch: mian/$1"
+	git checkout --force mian/$1 || {
 		echo -e "$red Failed to checkout branch $1 $nocolor"
 		exit 1
 	}
