@@ -44,30 +44,29 @@ prepare_workdir(){
 	mkdir -p "$workdir" && cd "$_"
 
 	echo "Downloading mesa source ..." $'\n'
-	# 去掉 --depth=1，获取完整仓库以便补丁能正确应用
-	git clone $mesasrc --no-single-branch $srcfolder
+	# 与 Android 脚本保持一致：浅克隆 main 分支
+	git clone $mesasrc --depth=1 -b main $srcfolder
 	cd $srcfolder
 }
 
 build_lib_for_linux(){
 	echo "==== Building Mesa on $1 branch ===="
 	
-	# 先切换到指定远程分支
-	echo "Switching to branch: $1"
-	git checkout --force $1 || {
-		echo -e "$red Failed to checkout branch $1 $nocolor"
-		exit 1
-	}
-	
-	# 再应用补丁
+	# 先应用补丁（与 Android 脚本顺序一致）
 	echo "Applying patches... ($2)"
 	wget https://github.com/whitebelyash/mesa-tu8/releases/download/patchset-head-v2/$2
 	if ! git apply --check $2; then
-		echo -e "$red Failed to apply $2! $nocolor"
-		echo "Check if the patch is compatible with branch $1"
+		echo "Failed to apply $2!"
 		exit 1
 	fi
 	git apply $2
+	
+	# 再切换到指定远程分支（与 Android 脚本的 git checkout origin/$1 对应）
+	echo "Switching to branch: origin/$1"
+	git checkout --force origin/$1 || {
+		echo -e "$red Failed to checkout branch $1 $nocolor"
+		exit 1
+	}
 	
 	GITHASH=$(git rev-parse --short HEAD)
 
