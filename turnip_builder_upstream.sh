@@ -44,29 +44,30 @@ prepare_workdir(){
 	mkdir -p "$workdir" && cd "$_"
 
 	echo "Downloading mesa source ..." $'\n'
-	# 克隆所有分支以便切换到 turnip/gen8
-	git clone $mesasrc --depth=1 --no-single-branch $srcfolder
+	# 去掉 --depth=1，获取完整仓库以便补丁能正确应用
+	git clone $mesasrc --no-single-branch $srcfolder
 	cd $srcfolder
 }
 
 build_lib_for_linux(){
 	echo "==== Building Mesa on $1 branch ===="
 	
-	# 应用补丁
-	echo "Applying patches... ($2)"
-	wget https://github.com/whitebelyash/mesa-tu8/releases/download/patchset-head-v2/$2
-	if ! git apply --check $2; then
-		echo "Failed to apply $2!"
-		exit 1
-	fi
-	git apply $2
-	
-	# 切换到指定远程分支
+	# 先切换到指定远程分支
 	echo "Switching to branch: origin/$1"
 	git checkout --force origin/$1 || {
 		echo -e "$red Failed to checkout branch $1 $nocolor"
 		exit 1
 	}
+	
+	# 再应用补丁
+	echo "Applying patches... ($2)"
+	wget https://github.com/whitebelyash/mesa-tu8/releases/download/patchset-head-v2/$2
+	if ! git apply --check $2; then
+		echo -e "$red Failed to apply $2! $nocolor"
+		echo "Check if the patch is compatible with branch $1"
+		exit 1
+	fi
+	git apply $2
 	
 	GITHASH=$(git rev-parse --short HEAD)
 
