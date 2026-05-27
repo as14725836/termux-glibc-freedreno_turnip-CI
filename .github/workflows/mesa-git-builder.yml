@@ -10,7 +10,7 @@ on:
 
 jobs:
   start_building_turnip:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     env:
       BUILD_VERSION: ${{ inputs.version }}
     steps:
@@ -18,10 +18,14 @@ jobs:
 
     - name: Prepare environment
       run: |
-        sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
         sudo apt update
-        sudo apt install build-essential flex bison glslang-tools
-        sudo apt install meson-1.5 
+        sudo sed -i "s/^Types: deb$/Types: deb deb-src/" /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt update
+          sudo apt install -y glslang-tools libxrandr-dev libxxf86vm-dev libxcb-shm0-dev libxcb-glx0-dev \
+            libxext-dev llvm-19 libx11-dev libx11-xcb-dev libxcb1-dev libxcb-dri3-dev libxcb-present-dev \
+            libxcb-randr0-dev libxcb-sync-dev libxcb-xfixes0-dev libxshmfence-dev libdrm-dev \
+            libgbm-dev libegl1-mesa-dev libexpat1-dev libwayland-dev python3-pip
+          pip3 install --user meson ninja mako
 
     - name: Execute build script
       run: bash ./turnip_builder_upstream.sh
@@ -38,10 +42,7 @@ jobs:
 
           This is a build of current upstream Mesa with my GPU enablement hacks applied
           
-
         tag_name: mesa_v${{ inputs.version }}
         name: Mesa Turnip v${{ inputs.version }}
         files: |
-           /tmp/mesa-turnip-main-V${{ inputs.version }}.zip
-           /tmp/mesa-turnip-main-V${{ inputs.version }}.zip
-
+          /tmp/mesa-turnip-main-V${{ inputs.version }}.zip
