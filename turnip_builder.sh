@@ -65,6 +65,7 @@ build_lib_for_linux(){
 	echo "Generating build files for Linux ..." $'\n'
 	meson setup build-linux \
 		--prefix=/tmp/turnip-$2 \
+		--libdir=lib \
 		-Dbuildtype=release \
 		-Dplatforms=x11 \
 		-Dstrip=true \
