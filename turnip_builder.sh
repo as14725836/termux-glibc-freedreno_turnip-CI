@@ -6,24 +6,16 @@ red='\033[0;31m'
 nocolor='\033[0m'
 deps="git meson ninja patchelf unzip curl pip flex bison zip glslang glslangValidator"
 workdir="$(pwd)/turnip_workdir"
-magiskdir="$workdir/turnip_module"
-ndkver="android-ndk-r29"
-ndk="$workdir/$ndkver/toolchains/llvm/prebuilt/linux-x86_64/bin"
-sdkver="34"
 mesasrc="https://github.com/whitebelyash/mesa-unified"
 srcfolder="mesa"
 
 clear
 
-#There are 4 functions here, simply comment to disable.
-#You can insert your own function and make a pull request.
 run_all(){
 	echo "====== Begin building TU V$BUILD_VERSION! ======"
 	check_deps
 	prepare_workdir
-	# This has path slash in the branch name and thus needs some workarounds
-	build_lib_for_android turnip/gen8 turnip-gen8 
-	#build_lib_for_android gen8-yuck
+	build_lib_for_linux turnip/gen8 turnip-gen8
 }
 
 check_deps(){
@@ -51,113 +43,44 @@ prepare_workdir(){
 	echo "Preparing work directory ..." $'\n'
 		mkdir -p "$workdir" && cd "$_"
 
-	echo "Downloading android-ndk from google server ..." $'\n'
-		curl https://dl.google.com/android/repository/"$ndkver"-linux.zip --output "$ndkver"-linux.zip &> /dev/null
-	echo "Exracting android-ndk ..." $'\n'
-		unzip "$ndkver"-linux.zip &> /dev/null
-
 	echo "Downloading mesa source ..." $'\n'
 		git clone $mesasrc --depth=1 --no-single-branch $srcfolder
 		cd $srcfolder
 }
 
-# $1 - real branch, $2 - escaped branch name
-build_lib_for_android(){
+build_lib_for_linux(){
 	echo "==== Building Mesa on $1 branch ===="
 	git checkout --force origin/$1
 	echo "Pushing TU_VERSION..."
 	echo "#define TUGEN8_DRV_VERSION \"v$BUILD_VERSION\"" > ./src/freedreno/vulkan/tu_version.h
-	#Workaround for using Clang as c compiler instead of GCC
-	mkdir -p "$workdir/bin"
-	ln -sf "$ndk/clang" "$workdir/bin/cc"
-	ln -sf "$ndk/clang++" "$workdir/bin/c++"
-	export PATH="$workdir/bin:$ndk:$PATH"
-	export CC=clang
-	export CXX=clang++
-	export AR=llvm-ar
-	export RANLIB=llvm-ranlib
-	export STRIP=llvm-strip
-	export OBJDUMP=llvm-objdump
-	export OBJCOPY=llvm-objcopy
-	export LDFLAGS="-fuse-ld=lld"
 
-	echo "Generating build files ..." $'\n'
-		cat <<EOF >"android-aarch64.txt"
-[binaries]
-ar = '$ndk/llvm-ar'
-c = ['ccache', '$ndk/aarch64-linux-android$sdkver-clang']
-cpp = ['ccache', '$ndk/aarch64-linux-android$sdkver-clang++', '-fno-exceptions', '-fno-unwind-tables', '-fno-asynchronous-unwind-tables', '--start-no-unused-arguments', '-static-libstdc++', '--end-no-unused-arguments']
-c_ld = '$ndk/ld.lld'
-cpp_ld = '$ndk/ld.lld'
-strip = '$ndk/llvm-strip'
-pkg-config = ['env', 'PKG_CONFIG_LIBDIR=$ndk/pkg-config', '/usr/bin/pkg-config']
-
-[host_machine]
-system = 'android'
-cpu_family = 'aarch64'
-cpu = 'armv8'
-endian = 'little'
-EOF
-
-		cat <<EOF >"native.txt"
-[build_machine]
-c = ['ccache', 'clang']
-cpp = ['ccache', 'clang++']
-ar = 'llvm-ar'
-strip = 'llvm-strip'
-c_ld = 'ld.lld'
-cpp_ld = 'ld.lld'
-system = 'linux'
-cpu_family = 'x86_64'
-cpu = 'x86_64'
-endian = 'little'
-EOF
-
-		meson setup build-android-aarch64 \
-			--cross-file "android-aarch64.txt" \
-			--native-file "native.txt" \
-			--prefix /tmp/turnip-$2 \
+	echo "Generating build files for Linux ..." $'\n'
+		meson setup build-linux \
+			--prefix=/tmp/turnip-$2 \
 			-Dbuildtype=release \
 			-Dstrip=true \
-			-Dplatforms=android \
-			-Dvideo-codecs= \
-			-Dplatform-sdk-version="$sdkver" \
-			-Dandroid-stub=true \
 			-Dgallium-drivers= \
 			-Dvulkan-drivers=freedreno \
 			-Dvulkan-beta=true \
 			-Dfreedreno-kmds=kgsl \
 			-Degl=disabled \
-			-Dplatform-sdk-version=36 \
-			-Dandroid-libbacktrace=disabled \
 			--reconfigure
 
 	echo "Compiling build files ..." $'\n'
-		ninja -C build-android-aarch64 install
+		ninja -C build-linux install
 
 	if ! [ -a /tmp/turnip-$2/lib/libvulkan_freedreno.so ]; then
 		echo -e "$red Build failed! $nocolor" && exit 1
 	fi
+
 	echo "Making the archive"
 	cd /tmp/turnip-$2/lib
-	cat <<EOF >"meta.json"
-{
-  "schemaVersion": 1,
-  "name": "A8XX Turnip v$BUILD_VERSION",
-  "description": "A8xx support with some hacks. Built from $1 branch",
-  "author": "whitebelyash",
-  "packageVersion": "1",
-  "vendor": "Mesa",
-  "driverVersion": "Vulkan 1.4.335",
-  "minApi": 28,
-  "libraryName": "libvulkan_freedreno.so"
-}
-EOF
-zip /tmp/a8xx-$2-V$BUILD_VERSION.zip libvulkan_freedreno.so meta.json
-cd -
-if ! [ -a /tmp/a8xx-$2-V$BUILD_VERSION.zip ]; then
-	echo -e "$red Failed to pack the archive! $nocolor"
-fi
+	zip /tmp/a8xx-$2-V$BUILD_VERSION.zip libvulkan_freedreno.so
+	cd -
+	
+	if ! [ -a /tmp/a8xx-$2-V$BUILD_VERSION.zip ]; then
+		echo -e "$red Failed to pack the archive! $nocolor"
+	fi
 }
 
 run_all
