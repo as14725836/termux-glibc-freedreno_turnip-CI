@@ -15,7 +15,7 @@ run_all(){
 	echo "====== Begin building TU V$BUILD_VERSION! ======"
 	check_deps
 	prepare_workdir
-	build_lib_for_linux turnip/gen8 turnip-gen8   # 改为 turnip/gen8
+	build_lib_for_linux main tu8_kgsl.patch   # 改为 turnip/gen8
 }
 
 check_deps(){
