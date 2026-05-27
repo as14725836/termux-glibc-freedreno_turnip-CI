@@ -15,7 +15,7 @@ run_all(){
 	echo "====== Begin building TU V$BUILD_VERSION! ======"
 	check_deps
 	prepare_workdir
-	build_lib_for_linux main tu8_kgsl.patch   # 改为 turnip/gen8
+	build_lib_for_linux "turnip/gen8" tu8_kgsl.patch
 }
 
 check_deps(){
@@ -44,7 +44,7 @@ prepare_workdir(){
 	mkdir -p "$workdir" && cd "$_"
 
 	echo "Downloading mesa source ..." $'\n'
-	# 注意：改为克隆所有分支，以便切换到 turnip/gen8
+	# 克隆所有分支以便切换到 turnip/gen8
 	git clone $mesasrc --depth=1 --no-single-branch $srcfolder
 	cd $srcfolder
 }
@@ -52,13 +52,7 @@ prepare_workdir(){
 build_lib_for_linux(){
 	echo "==== Building Mesa on $1 branch ===="
 	
-	# 切换到指定分支
-	echo "Switching to branch: mian/$1"
-	git checkout --force mian/$1 || {
-		echo -e "$red Failed to checkout branch $1 $nocolor"
-		exit 1
-	}
-	
+	# 应用补丁
 	echo "Applying patches... ($2)"
 	wget https://github.com/whitebelyash/mesa-tu8/releases/download/patchset-head-v2/$2
 	if ! git apply --check $2; then
@@ -66,6 +60,14 @@ build_lib_for_linux(){
 		exit 1
 	fi
 	git apply $2
+	
+	# 切换到指定远程分支
+	echo "Switching to branch: origin/$1"
+	git checkout --force origin/$1 || {
+		echo -e "$red Failed to checkout branch $1 $nocolor"
+		exit 1
+	}
+	
 	GITHASH=$(git rev-parse --short HEAD)
 
 	echo "Generating build files for Linux ..." $'\n'
