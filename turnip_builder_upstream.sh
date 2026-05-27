@@ -15,7 +15,7 @@ run_all(){
 	echo "====== Begin building TU V$BUILD_VERSION! ======"
 	check_deps
 	prepare_workdir
-	build_lib_for_linux main tu8_kgsl.patch
+	build_lib_for_linux turnip/gen8 tu8_kgsl.patch   # 改为 turnip/gen8
 }
 
 check_deps(){
@@ -36,54 +36,64 @@ check_deps(){
 		fi
 
 	echo "Installing python Mako dependency (if missing) ..." $'\n'
-		pip install mako &> /dev/null
+	pip install mako &> /dev/null
 }
 
 prepare_workdir(){
 	echo "Preparing work directory ..." $'\n'
-		mkdir -p "$workdir" && cd "$_"
+	mkdir -p "$workdir" && cd "$_"
 
 	echo "Downloading mesa source ..." $'\n'
-		git clone $mesasrc --depth=1 -b main $srcfolder
-		cd $srcfolder
+	# 注意：改为克隆所有分支，以便切换到 turnip/gen8
+	git clone $mesasrc --depth=1 --no-single-branch $srcfolder
+	cd $srcfolder
 }
 
 build_lib_for_linux(){
 	echo "==== Building Mesa on $1 branch ===="
+	
+	# 切换到指定分支
+	echo "Switching to branch: origin/$1"
+	git checkout --force origin/$1 || {
+		echo -e "$red Failed to checkout branch $1 $nocolor"
+		exit 1
+	}
+	
 	echo "Applying patches... ($2)"
-    	wget https://github.com/whitebelyash/mesa-tu8/releases/download/patchset-head-v2/$2
-		if ! git apply --check $2; then
-			echo "Failed to apply $2!"
-			exit 1
-		fi
-    	git apply $2
+	wget https://github.com/whitebelyash/mesa-tu8/releases/download/patchset-head-v2/$2
+	if ! git apply --check $2; then
+		echo "Failed to apply $2!"
+		exit 1
+	fi
+	git apply $2
 	GITHASH=$(git rev-parse --short HEAD)
 
 	echo "Generating build files for Linux ..." $'\n'
-		meson setup build-linux \
-			--prefix /tmp/turnip-$1 \
-			--libdir=lib \
-			-Dbuildtype=release \
-			-Dstrip=true \
-			-Dgallium-drivers= \
-			-Dvulkan-drivers=freedreno \
-			-Dvulkan-beta=true \
-			-Dfreedreno-kmds=kgsl \
-			-Degl=disabled \
-			--reconfigure
+	meson setup build-linux \
+		--prefix /tmp/turnip-$1 \
+		--libdir=lib \
+		-Dbuildtype=release \
+		-Dstrip=true \
+		-Dplatforms=x11,wayland \
+		-Dgallium-drivers= \
+		-Dvulkan-drivers=freedreno \
+		-Dvulkan-beta=true \
+		-Dfreedreno-kmds=kgsl \
+		-Degl=disabled \
+		--reconfigure
 
 	echo "Compiling build files ..." $'\n'
-		ninja -C build-linux install
+	ninja -C build-linux install
 
 	if ! [ -a /tmp/turnip-$1/lib/libvulkan_freedreno.so ]; then
 		echo -e "$red Build failed! $nocolor" && exit 1
 	fi
-	
+
 	echo "Making the archive"
 	cd /tmp/turnip-$1/lib
 	zip /tmp/mesa-turnip-$1-V$BUILD_VERSION.zip libvulkan_freedreno.so
 	cd -
-	
+
 	if ! [ -a /tmp/mesa-turnip-$1-V$BUILD_VERSION.zip ]; then
 		echo -e "$red Failed to pack the archive! $nocolor"
 	else
