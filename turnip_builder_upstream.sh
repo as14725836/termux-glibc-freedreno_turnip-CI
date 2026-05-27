@@ -62,6 +62,7 @@ build_lib_for_linux(){
 	echo "Generating build files for Linux ..." $'\n'
 		meson setup build-linux \
 			--prefix /tmp/turnip-$1 \
+			--libdir=lib \
 			-Dbuildtype=release \
 			-Dstrip=true \
 			-Dgallium-drivers= \
