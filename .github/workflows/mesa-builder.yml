@@ -10,7 +10,7 @@ on:
 
 jobs:
   start_building_turnip:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     env:
       BUILD_VERSION: ${{ inputs.version }}
     steps:
@@ -18,10 +18,10 @@ jobs:
 
     - name: Prepare environment
       run: |
-        sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
         sudo apt update
-        sudo apt install build-essential flex bison glslang-tools
-        sudo apt install meson-1.5 
+        sudo apt install -y build-essential flex bison glslang-tools
+        sudo apt install -y meson ninja-build python3-pip curl zip unzip git
+        pip3 install mako
 
     - name: Execute build script
       run: bash ./turnip_builder_upstream.sh
@@ -40,8 +40,7 @@ jobs:
           This is a build of current upstream Mesa (26.0) with my UBWC hacks applied.  
           Unlike my old Turnip builds, this one is based directly on the main repo with only essential hacks applied to boot it on Android WSI platform. As I said, it won't work on GPUs other than Adreno 840.  
           
-
         tag_name: mesa26_v${{ inputs.version }}
         name: Mesa 26.0 Turnip v${{ inputs.version }}
         files: |
-           /tmp/mesa-turnip-main-V${{ inputs.version }}.zip
+          /tmp/mesa-turnip-main-V${{ inputs.version }}.zip
