@@ -54,7 +54,7 @@ build_lib_for_linux(){
 	
 	# 先切换到指定远程分支
 	echo "Switching to branch: origin/$1"
-	git checkout --force origin/$1 || {
+	git checkout --force $1 || {
 		echo -e "$red Failed to checkout branch $1 $nocolor"
 		exit 1
 	}
