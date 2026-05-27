@@ -66,6 +66,7 @@ build_lib_for_linux(){
 	meson setup build-linux \
 		--prefix=/tmp/turnip-$2 \
 		-Dbuildtype=release \
+		-Dplatforms=x11 \
 		-Dstrip=true \
 		-Dgallium-drivers= \
 		-Dvulkan-drivers=freedreno \
