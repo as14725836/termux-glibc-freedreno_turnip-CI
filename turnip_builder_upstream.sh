@@ -98,7 +98,7 @@ build_lib_for_linux(){
             -Dgallium-drivers=zink,freedreno,virgl,softpipe \
             -Dgallium-rusticl-enable-drivers=freedreno \
             -Dshader-cache-default=true \
-            -Dvulkan-drivers=freedreno,swrast,virtio \
+            -Dvulkan-drivers=freedreno \
             -Dfreedreno-kmds=kgsl \
             -Dvulkan-layers=anti-lag \
             -Dvideo-codecs=all \
